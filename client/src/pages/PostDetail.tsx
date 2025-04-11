@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Paper, Typography, Box, Divider, Button, TextField, IconButton } from '@mui/material';
 import api from '../api/axios';
-import { Delete as DeleteIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit } from '@mui/icons-material';
+import { Dialog, DialogTitle, DialogActions, DialogContent, DialogContentText } from '@mui/material';
 
 interface Post {
     _id: string;
@@ -33,6 +34,7 @@ const PostDetail = () => {
     const [error, setError] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [editedPost, setEditedPost] = useState({ title: '', content: '' });
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
     const token = localStorage.getItem('token');
     const userId = token ? JSON.parse(atob(token.split('.')[1]))._id : null;
@@ -99,6 +101,16 @@ const PostDetail = () => {
         }
     };
 
+    const handleDeletePost = async () => {
+        try {
+            await api.delete(`/posts/${id}`);
+            setDeleteDialogOpen(false);
+            navigate('/');
+        } catch (error: any) {
+            setError(error.response?.data?.message || 'Failed to delete post');
+        }
+    };
+
     if (error) {
         return (
             <Container>
@@ -143,27 +155,57 @@ const PostDetail = () => {
                     </Box>
                 ) : (
                     <>
-                        <Typography variant="h4" gutterBottom>
-                            {post.title}
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                            <Typography variant="h4" gutterBottom>
+                                {post.title}
+                            </Typography>
+                            {(userId === post.author._id) && (
+                                <Box>
+                                    <IconButton
+                                        color="primary"
+                                        onClick={() => setIsEditing(true)}
+                                    >
+                                        < Edit />
+                                    </IconButton>
+
+                                    <IconButton
+                                        color="error"
+                                        onClick={() => setDeleteDialogOpen(true)}
+                                    >
+                                        <DeleteIcon />
+                                    </IconButton>
+                                </Box>
+                            )}
+                        </Box>
                         <Typography variant="subtitle1" color="text.secondary" gutterBottom>
                             By {post.author.username} • {new Date(post.createdAt).toLocaleDateString()}
                         </Typography>
-                        {(userId === post.author._id) && (
-                            <Button
-                                variant="outlined"
-                                onClick={() => setIsEditing(true)}
-                                sx={{ mb: 2 }}
-                            >
-                                Edit Post
-                            </Button>
-                        )}
+
                         <Divider sx={{ my: 2 }} />
                         <Box sx={{ whiteSpace: 'pre-wrap' }}>
                             <Typography variant="body1">{post.content}</Typography>
                         </Box>
                     </>
                 )}
+
+                {/* Delete Confirmation Dialog */}
+                <Dialog
+                    open={deleteDialogOpen}
+                    onClose={() => setDeleteDialogOpen(false)}
+                >
+                    <DialogTitle>Delete Post</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Are you sure you want to delete this post? This action cannot be undone.
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleDeletePost} color="error" variant="contained">
+                            Delete
+                        </Button>
+                    </DialogActions>
+                </Dialog>
 
                 {/* Comments Section */}
                 <Box sx={{ mt: 4 }}>

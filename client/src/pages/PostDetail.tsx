@@ -91,11 +91,20 @@ const PostDetail = () => {
         }
     };
 
-    // Add deleteComment function inside PostDetail component
-    const handleDeleteComment = async (commentId: string) => {
+    // Add new state for comment deletion dialog
+    const [deleteCommentDialog, setDeleteCommentDialog] = useState<{ open: boolean; commentId: string | null }>({
+        open: false,
+        commentId: null
+    });
+    
+    // Update the delete comment handler
+    const handleDeleteComment = async () => {
         try {
-            await api.delete(`/comments/${commentId}`);
-            fetchComments();
+            if (deleteCommentDialog.commentId) {
+                await api.delete(`/comments/${deleteCommentDialog.commentId}`);
+                fetchComments();
+                setDeleteCommentDialog({ open: false, commentId: null });
+            }
         } catch (error: any) {
             setError(error.response?.data?.message || 'Failed to delete comment');
         }
@@ -230,9 +239,6 @@ const PostDetail = () => {
                     )}
 
                     {comments.map((comment) => (
-
-
-                        // Update the comment rendering section
                         <Paper key={comment._id} sx={{ p: 2, mb: 2 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
@@ -241,10 +247,10 @@ const PostDetail = () => {
                                         By {comment.author.username} • {new Date(comment.createdAt).toLocaleDateString()}
                                     </Typography>
                                 </div>
-                                {(userId === comment.author || userId === post.author) && (
+                                {(userId === comment.author || userId === post.author._id) && (
                                     <IconButton
                                         size="small"
-                                        onClick={() => handleDeleteComment(comment._id)}
+                                        onClick={() => setDeleteCommentDialog({ open: true, commentId: comment._id })}
                                         sx={{ ml: 1 }}
                                         color='error'
                                     >
@@ -254,6 +260,27 @@ const PostDetail = () => {
                             </Box>
                         </Paper>
                     ))}
+
+                    {/* Add Comment Delete Confirmation Dialog */}
+                    <Dialog
+                        open={deleteCommentDialog.open}
+                        onClose={() => setDeleteCommentDialog({ open: false, commentId: null })}
+                    >
+                        <DialogTitle>Delete Comment</DialogTitle>
+                        <DialogContent>
+                            <DialogContentText>
+                                Are you sure you want to delete this comment? This action cannot be undone.
+                            </DialogContentText>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setDeleteCommentDialog({ open: false, commentId: null })}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handleDeleteComment} color="error" variant="contained">
+                                Delete
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
                 </Box>
             </Paper>
         </Container>
